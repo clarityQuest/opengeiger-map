@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="opengeiger.de"
+  xmlns="http://www.topografix.com/GPX/1/1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata>
+    <name>opengeiger.de – Geiger Caching Locations</name>
+    <desc>Interesting excursions from opengeiger.de (http://www.opengeiger.de/GeigerCaching/GeigerCaching.html)</desc>
+    <link href="http://www.opengeiger.de/GeigerCaching/GeigerCaching.html">
+      <text>opengeiger.de Geiger Caching</text>
+    </link>
+  </metadata>
+  <wpt lat="48.806383" lon="9.170617">
+    <name>Kapelle Höhenpark Killesberg, Stuttgart</name>
+    <desc>Gamma-ODL Referenzpunkt – Kapelle im Höhenpark Killesberg in Stuttgart. Erhöhte natürliche Radioaktivität durch Thorium-haltige Gesteine.</desc>
+    <sym>Waypoint</sym>
+  </wpt>
+  <wpt lat="52.758889" lon="13.224167">
+    <name>Oranienburg</name>
+    <desc>Mapping Oranienburg – kriegsbedingte radioaktive Kontaminierung durch Uran-Rückstände aus der NS-Zeit. Citizen Science Kartierungsprojekt.</desc>
+    <sym>Waypoint</sym>
+  </wpt>
+  <wpt lat="48.7758" lon="9.1829">
+    <name>Esslingen – Schlackesteinpflaster</name>
+    <desc>Straßenpflaster aus Schlackesteinen mit erhöhter natürlicher Radioaktivität in Esslingen am Neckar.</desc>
+    <sym>Waypoint</sym>
+  </wpt>
+</gpx>
