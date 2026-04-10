@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Abnormal Radiation Map</title>
+<title>Elevated Radiation Map</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
@@ -27,6 +27,11 @@
     flex-wrap: nowrap;
   }
   .header-meta { min-width: 0; }
+  .source-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
   header h1 {
     font-size: 16px;
     font-weight: 600;
@@ -109,7 +114,8 @@
   @media (max-width: 480px) {
     header { padding: 8px 8px; gap: 8px; }
     header h1 { font-size: 14px; }
-    header a { font-size: 12px; }
+    header a { font-size: 11px; }
+    .source-links { gap: 6px; }
     .locate-btn { padding: 5px 8px; font-size: 11px; }
     #locate-status { display: none; }
     #legend-stack { bottom: 8px; left: 8px; }
@@ -126,8 +132,11 @@
 <body>
 <header>
   <div class="header-meta">
-    <h1>&#9762; Abnormal Radiation Map</h1>
-    <a href="http://www.opengeiger.de/GeigerCaching/GeigerCaching.html" target="_blank">opengeiger.de</a>
+    <h1>&#9762; Elevated Radiation Map</h1>
+    <div class="source-links">
+      <a href="http://www.opengeiger.de/GeigerCaching/GeigerCaching.html" target="_blank">opengeiger.de</a>
+      <a href="https://www.geigerzaehlerforum.de/" target="_blank">geigerzaehlerforum.de</a>
+    </div>
   </div>
   <button class="locate-btn" id="locate-btn" type="button">Show my position</button>
   <span id="locate-status">Click a marker for details</span>
@@ -494,11 +503,11 @@ function getTier(d) {
 var map = L.map('map').setView([51, 12], 5);
 var isLocalFile = window.location.protocol === 'file:';
 var osmOptions = {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Data: <a href="http://www.opengeiger.de">opengeiger.de</a>',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Data: <a href="http://www.opengeiger.de">opengeiger.de</a>, <a href="https://www.geigerzaehlerforum.de/">geigerzaehlerforum.de</a>',
   maxZoom: 18
 };
 var voyagerOptions = {
-  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> | Data: <a href="http://www.opengeiger.de">opengeiger.de</a>',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> | Data: <a href="http://www.opengeiger.de">opengeiger.de</a>, <a href="https://www.geigerzaehlerforum.de/">geigerzaehlerforum.de</a>',
   subdomains: 'abcd',
   maxZoom: 20
 };

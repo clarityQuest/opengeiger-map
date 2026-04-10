@@ -1,4 +1,4 @@
-# Abnormal Radiation Map
+# Elevated Radiation Map
 
 Interactive map of locations with elevated or unusual radiation readings, combining opengeiger.de and Geigerzählerforum entries.
 
