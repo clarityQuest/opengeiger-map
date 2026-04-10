@@ -1,0 +1,1 @@
+﻿board_pages=1 topic_pages=329 image_links=167 images_ok=162 images_error=5 topic_links_file=.\\geigerzaehlerforum parser\\downloaded_board6\topic_links.txt images_manifest=.\\geigerzaehlerforum parser\\downloaded_board6\downloaded_images.csv

@@ -1,0 +1,4 @@
+﻿query=cold war museum berlin
+nominatim_error=Der Remoteserver hat einen Fehler zurückgegeben: (429) Too many requests.
+photon_count=3
+photon_1=38.7430545,-77.6764145 | The Cold War Museum

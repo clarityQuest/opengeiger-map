@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Geiger Caching Map – opengeiger.de</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; }
+  header { background: #1a1a2e; color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 17px; font-weight: 600; }
+  header a { color: #88aaff; font-size: 13px; text-decoration: none; }
+  .locate-btn {
+    margin-left: auto;
+    border: 0;
+    border-radius: 6px;
+    background: #2e6ea8;
+    color: #fff;
+    padding: 7px 10px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .locate-btn:hover { background: #3b84c5; }
+  #locate-status { font-size: 12px; color: #c6d6ea; }
+  #map { width: 100%; height: calc(100vh - 56px); }
+  #legend {
+    position: absolute; bottom: 32px; left: 12px; z-index: 1000;
+    background: rgba(255,255,255,0.95); border-radius: 8px;
+    padding: 10px 14px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    line-height: 2;
+  }
+  #legend strong { display: block; margin-bottom: 4px; font-size: 13px; }
+  .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 6px; vertical-align: middle; border: 1.5px solid rgba(255,255,255,0.8); }
+  #info {
+    position: absolute; top: 12px; right: 12px; z-index: 1000; width: 280px;
+    background: rgba(255,255,255,0.97); border-radius: 8px;
+    padding: 14px 16px; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: none; line-height: 1.6;
+  }
+  #info .close { float: right; cursor: pointer; font-size: 18px; color: #888; line-height: 1; margin-left: 8px; }
+  #info .iname { font-weight: 600; font-size: 14px; margin-bottom: 6px; padding-right: 20px; }
+  #info .dose { font-size: 22px; font-weight: 700; margin: 4px 0 2px; }
+  #info .tier { font-size: 12px; color: #555; margin-bottom: 6px; }
+  #info .note { font-size: 12px; color: #444; margin-bottom: 10px; }
+  #info .src-link {
+    display: inline-block; font-size: 12px; padding: 5px 10px;
+    background: #1a1a2e; color: #fff; border-radius: 5px;
+    text-decoration: none;
+  }
+  #info .src-link:hover { background: #333; }
+  #info .link-row { display: flex; gap: 8px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>&#9762; Geiger Caching Map</h1>
+    <a href="http://www.opengeiger.de/GeigerCaching/GeigerCaching.html" target="_blank">opengeiger.de</a>
+  </div>
+  <button class="locate-btn" id="locate-btn" type="button">Show my position</button>
+  <span id="locate-status">Click a marker for details</span>
+</header>
+
+<div style="position:relative;">
+  <div id="map"></div>
+
+  <div id="legend">
+    <strong>Dose rate (&#181;Sv/h)</strong>
+    <div><span class="dot" style="background:#A32D2D"></span> Extreme &ge;10</div>
+    <div><span class="dot" style="background:#D85A30"></span> Very high 3&ndash;10</div>
+    <div><span class="dot" style="background:#EF9F27"></span> High 1&ndash;3</div>
+    <div><span class="dot" style="background:#639922"></span> Elevated 0.5&ndash;1</div>
+    <div><span class="dot" style="background:#378ADD"></span> Low &lt;0.5</div>
+  </div>
+
+  <div id="info">
+    <span class="close" onclick="document.getElementById('info').style.display='none'">&#215;</span>
+    <div class="iname" id="info-name"></div>
+    <div class="dose" id="info-dose"></div>
+    <div class="tier" id="info-tier"></div>
+    <div class="note" id="info-note"></div>
+    <div class="link-row">
+      <a class="src-link" id="info-link" href="#" target="_blank">&#8594; View on opengeiger.de</a>
+      <a class="src-link" id="info-gmaps" href="#" target="_blank">&#8594; Open in Google Maps</a>
+    </div>
+  </div>
+</div>
+
+<script>
+var BASE = 'http://www.opengeiger.de/GeigerCaching/GeigerCaching.html';
+
+function buildSourceUrl(loc) {
+  var textTarget = loc.name.replace(/\s+/g, ' ').trim();
+  if (loc.anchor) {
+    try {
+      textTarget = decodeURIComponent(loc.anchor.replace(/\+/g, ' ')).replace(/\s+/g, ' ').trim();
+    } catch (e) {
+      textTarget = loc.anchor.replace(/\+/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+  }
+  return BASE + '#:~:text=' + encodeURIComponent(textTarget);
+}
+
+function buildGoogleMapsUrl(lat, lng) {
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(lat + ',' + lng);
+}
+
+var locations = [
+  {name:"Uranbergbaumuseum Bad Schlema",lat:50.6001,lng:12.6745,dose:40,note:"Pechblende exhibit in display case",anchor:"Uranbergbaumuseum+Bad+Schlema"},
+  {name:"Ytterby Mine, Sweden",lat:59.4265,lng:18.3533,dose:18.8,note:"Historic rare-earth mine on Resar\u00f6 island",anchor:"Ytterby+Mine"},
+  {name:"Uranvererzungen A93 W\u00f6lsendorf",lat:49.4228,lng:12.1703,dose:11.6,note:"Uranium ore in granite outcrop at motorway A93",anchor:"Uranvererzungen+an+der+A93"},
+  {name:"Grube Krunkelbach, Menzenschwand",lat:47.8391,lng:8.0465,dose:10.1,note:"Former uranium mine, no warning signs present",anchor:"Grube+Krunkelbach+Menzenschwand"},
+  {name:"Majolika Karlsruhe",lat:49.0187,lng:8.4013,dose:10.0,note:"Radioactive sculpture \u2018Reiter\u2019 on factory grounds",anchor:"Majolika+Karlsruhe"},
+  {name:"Monte Scherbelino Stuttgart",lat:48.7656,lng:9.1314,dose:6.4,note:"WWII rubble hill, radioactive granite fragment",anchor:"Monte+Scherbelino+Stuttgart"},
+  {name:"Hotspot Gsponwald, Walensee CH",lat:47.0708,lng:9.1942,dose:6.651,note:"Natural radiation hotspot in Swiss forest",anchor:"Hotspot+im+Gsponwald"},
+  {name:"Freital-Burgk Abraumhalden",lat:51.0051,lng:13.6755,dose:5.833,note:"Former uranium mining spoil heaps",anchor:"Ehemalige+Bergbau-Abraumhalden+in+Freital-Burgk"},
+  {name:"Bergbau Museum Schloss Theuern",lat:49.3865,lng:11.9111,dose:5.3,note:"Mining museum with uranium mineral exhibit",anchor:"Bergbau+Museum+im+Schloss+Theuern"},
+  {name:"Uranabbaugebiet Ronneburg",lat:50.848,lng:12.171,dose:5.1,note:"Large former WISMUT uranium mining area",anchor:"Uranabbaugebiet+bei+Ronneburg"},
+  {name:"Schaentzel / Teufelsloch, Alsace",lat:48.2421,lng:7.3179,dose:4.5,note:"Natural uranium occurrences, Vosges foothills",anchor:"Schaentzel+und+Teufelsloch"},
+  {name:"Jachymov (CZ)",lat:50.3596,lng:12.9352,dose:4.4,note:"Historic radium city, Marie Curie\u2019s uranium source",anchor:"Jachymov"},
+  {name:"Schmiedestollenhalde Wittichen",lat:48.3366,lng:8.3416,dose:3.53,note:"Uranium ore spoil heap, geological trail",anchor:"Schmiedestollenhalde+Wittichen"},
+  {name:"Absetzanlage D\u00e4nkritz II",lat:50.7715,lng:12.4292,dose:3.278,note:"WISMUT uranium ore processing residue pond",anchor:"Absetzanlage+D%C3%A4nkritz+II"},
+  {name:"Wismut-Teich Steinach",lat:50.4443,lng:11.1701,dose:3.266,note:"Contaminated fish pond from WISMUT era",anchor:"Wismut-Teich+in+Steinach"},
+  {name:"Teufelsgrund K\u00f6nigstein",lat:50.9166,lng:14.0382,dose:2.639,note:"Adjacent to WISMUT uranium mining area",anchor:"Teufelsgrund+bei+K%C3%B6nigstein"},
+  {name:"Versuchsreaktor Gottow / Kummersdorf",lat:52.0919,lng:13.3103,dose:2.569,note:"WWII experimental reactor building ruins",anchor:"Versuchsreaktor+Gottow"},
+  {name:"Windbergbahn Kleinnaundorf\u2013Freital",lat:51.0005,lng:13.6871,dose:2.5,note:"Railway embankment built with uranium slag",anchor:"Windbergbahn"},
+  {name:"Oranienburg II",lat:52.7498,lng:13.2466,dose:2.45,note:"WWII uranium processing contamination",anchor:"Oranienburg+II"},
+  {name:"Schlammteich 4 Freital-D\u00f6hlen",lat:51.0022,lng:13.6326,dose:2.338,note:"Uranium-contaminated sludge pond",anchor:"Schlammteich+4+in+Freital"},
+  {name:"Tschernobyl",lat:51.3889,lng:30.0975,dose:2.0,note:"Chernobyl exclusion zone",anchor:"Tschernobyl"},
+  {name:"Atomkeller Haigerloch",lat:48.367,lng:8.8041,dose:2.07,note:"WWII nuclear reactor cave museum",anchor:"Atomkeller+Haigerloch"},
+  {name:"Mineralienmuseum Schneckenstein",lat:50.4171,lng:12.4533,dose:1.764,note:"Mineral museum with uranium specimens",anchor:"Vogtl%C3%A4ndisch-B%C3%B6hmisches+Mineralienzentrum+Schneckenstein"},
+  {name:"Uranfabrik Ranstad, Sweden",lat:58.3137,lng:13.7031,dose:1.663,note:"Former uranium factory, flooded pit as \u2018biotope\u2019",anchor:"Uranfabrik+in+Ranstad"},
+  {name:"Radonstollen Stammelbachtal",lat:48.2663,lng:8.3186,dose:1.583,note:"Hidden radon mine shaft \u2013 entry dangerous!",anchor:"Radonstollen+im+Stammelbachtal"},
+  {name:"Strand L\u2019Espiguette, Camargue",lat:43.4783,lng:4.1512,dose:1.526,note:"Natural thorium-enriched beach sand",anchor:"radioaktive+Badestrand+von+L%27Espiguette"},
+  {name:"Halde Helbra",lat:51.5368,lng:11.4901,dose:1.451,note:"Copper smelting slag heap with uranium",anchor:"Halde+Helbra"},
+  {name:"Feengrotten Saalfeld",lat:50.6353,lng:11.3416,dose:1.5,note:"Fairy grottoes with natural radon",anchor:"Feengrotten+in+Saalfeld"},
+  {name:"Silvertbach Marl",lat:51.6785,lng:7.1324,dose:1.27,note:"Radium-contaminated stream bank, no warning signs",anchor:"Hot+Dogs+am+Silvertbach+in+Marl"},
+  {name:"Lost Place Einkaufszentrum",lat:49.4496,lng:8.4104,dose:1.287,note:"Former contaminated site, now shopping centre",anchor:"Lost+Place+-+Das+kontaminierte+Einkaufszentrum"},
+  {name:"Sportplatz Kleinnaundorf",lat:50.9979,lng:13.6847,dose:1.221,note:"Contaminated sports field near Dresden",anchor:"Kontaminierter+Sportplatz+in+Kleinnaundorf"},
+  {name:"Quarzsteinbruch Hennenkobel",lat:49.0516,lng:13.1697,dose:1.2,note:"Quartz quarry near Bodenmais, Bavarian Forest",anchor:"Quarzsteinbruch+am+Hennenkobel"},
+  {name:"Beach-Volleyball Dresden R\u00e4cknitz",lat:51.0245,lng:13.7201,dose:1.2,note:"Contaminated sand on sports court near TU Dresden",anchor:"Beach-Volleyball-Platz+in+Dresden"},
+  {name:"Frauentorstrasse Weimar",lat:50.9782,lng:11.329,dose:1.191,note:"Radioactive cobblestones from Mansfeld copper slag",anchor:"Frauentorstrasse+in+Weimar"},
+  {name:"Kapelle H\u00f6henpark Killesberg Stuttgart",lat:48.8064,lng:9.1706,dose:1.179,note:"Chapel built with uranium-bearing sandstone",anchor:"strahlende+Kapelle+im+H%C3%B6henpark+Killesberg"},
+  {name:"Uranabbaugebiet Ellweiler",lat:49.6177,lng:7.1466,dose:1.113,note:"Former uranium mining and processing site",anchor:"Uranabbaugebiet+in+Ellweiler"},
+  {name:"H\u00fcttengrund Helfta",lat:51.5036,lng:11.5523,dose:1.111,note:"16th century copper smelting slag heap",anchor:"H%C3%BCttengrund+Helfta"},
+  {name:"Nusshardtstube Fichtelgebirge",lat:50.041,lng:11.8645,dose:0.8,note:"Granite cave, high natural radiation",anchor:"Nusshardtstube+im+Fichtelgebirge"},
+  {name:"Sorge-Settendorf",lat:50.7349,lng:12.2238,dose:0.826,note:"WISMUT uranium mining remnants",anchor:"Sorge-Settendorf"},
+  {name:"Einleitstelle Elbe Th\u00fcrmsdorf",lat:50.9288,lng:14.0553,dose:0.79,note:"Radioactive mine water discharge into Elbe",anchor:"Einleitstelle+radioaktiver+Gruben-Abw%C3%A4sser"},
+  {name:"Uranbergbau-Revier Zobes-Mechelgr\u00fcn",lat:50.4672,lng:12.2472,dose:0.79,note:"Former Vogtland uranium mining district",anchor:"Zobes-Mechelgr%C3%BCn-Bergen"},
+  {name:"Theaterplatz Dresden (Semperoper)",lat:51.054,lng:13.735,dose:0.725,note:"Radioactive paving stones from Erzgebirge granite",anchor:"Stra%C3%9Fen+von+Dresden"},
+  {name:"Schlackensteine-Pfad H\u00fcneburg",lat:51.5205,lng:11.5176,dose:0.719,note:"Historic copper slag stone trail",anchor:"Schlackensteine-Pfad+an+der+Haldenlandschaft+H%C3%BCneburg"},
+  {name:"Collmberghalde Dresden Cosch\u00fctz",lat:51.0181,lng:13.6824,dose:0.69,note:"Former spoil heap",anchor:"Collmberghalde+Dresden"},
+  {name:"Kloster Adelberg (Brunnen)",lat:48.757,lng:9.5976,dose:0.7,note:"Monastery well built with uranium-bearing sandstone",anchor:"Brunnen+im+Kloster+Adelberg"},
+  {name:"Goethe-Denkmal Wien",lat:48.2034,lng:16.3661,dose:0.68,note:"Radioactive granite monument at Vienna opera ring",anchor:"strahlende+Goethe-Denkmal+in+Wien"},
+  {name:"Oranienburg I",lat:52.7444,lng:13.2554,dose:0.62,note:"WWII uranium contamination street level",anchor:"Oranienburg+I"},
+  {name:"Marktplatz Esslingen",lat:48.7431,lng:9.3056,dose:0.61,note:"Radioactive granite cobblestones",anchor:"Marktplatz+Esslingen"},
+  {name:"Hohentwiel bei Singen",lat:47.7638,lng:8.8179,dose:0.6,note:"Volcanic rock (phonolite) with natural uranium",anchor:"Hohentwiel+bei+Singen"},
+  {name:"Burg Windeck / Wachenburg Weinheim",lat:49.5498,lng:8.6853,dose:0.6,note:"Castle built with radioactive Quarzporphyr",anchor:"Burg+Windeck+und+Wachenburg"},
+  {name:"Bl\u00f6ssling / K\u00f6pfle Bernau",lat:47.7994,lng:8.0231,dose:0.563,note:"Black Forest granite summit",anchor:"Bl%C3%B6ssling+und+das+K%C3%B6pfle+bei+Bernau"},
+  {name:"\u00d6lberg Schriesheim",lat:49.4691,lng:8.6784,dose:0.559,note:"Quartz porphyry quarry climbing area",anchor:"Kletterrevier+im+Quarzporphyrsteinbruch+am+%C3%96lberg"},
+  {name:"Blei\u00adstra\u00dfe Stralsund",lat:54.3093,lng:13.0857,dose:0.531,note:"Street paved with radioactive Mansfeld copper slag",anchor:"Bleistra%C3%9Fe+in+Stralsund"},
+  {name:"A4 Dreieck Nossen",lat:51.0591,lng:13.4451,dose:0.53,note:"Motorway construction using uranium-containing fill",anchor:"Radioaktivit%C3%A4t+auf+der+A4"},
+  {name:"M\u00fchlbach am Hochk\u00f6nig AT",lat:47.3773,lng:13.1277,dose:0.5,note:"Austrian uranium mining museum with yellow cake",anchor:"M%C3%BChlbach+am+Hochk%C3%B6nig"},
+  {name:"Kirchheimerstollen M\u00fcllenbach",lat:48.7424,lng:8.2912,dose:0.474,note:"Former uranium mine adit near Baden-Baden",anchor:"Kirchheimerstollen+M%C3%BCllenbach"},
+  {name:"Radium-Quelle Thierberg",lat:50.4423,lng:12.4409,dose:0.465,note:"Natural radon spring in forest",anchor:"Radium-Quelle+am+Thierberg"},
+  {name:"Schramberg",lat:48.215,lng:8.379,dose:0.446,note:"Uranium occurrences in Black Forest granite",anchor:"Gebiet+Schramberg"},
+  {name:"Katzenbuckel bei Eberbach",lat:49.4698,lng:9.0453,dose:0.432,note:"Volcanic rock lakeshore in Odenwald",anchor:"Katzenbuckel+bei+Eberbach+im+Odenwald"},
+  {name:"Schlossberg Flossenb\u00fcrg",lat:49.7343,lng:12.3431,dose:0.437,note:"Granite quarry, former concentration camp site",anchor:"Schlossberg+Steinbruch+Flossenb%C3%BCrg"},
+  {name:"Hei\u00dfes Pflaster Eisleben",lat:51.5276,lng:11.5496,dose:0.4,note:"Uranium-bearing copper slag cobblestones",anchor:"Hei%C3%9Fes+Pflaster+in+Lutherstadt-Eisleben"},
+  {name:"Stuttgarter Marktplatz",lat:48.7752,lng:9.1784,dose:0.385,note:"Radioactive paving stones",anchor:"Stuttgarter+Marktplatz"},
+  {name:"Stuttgarter K\u00f6nigstra\u00dfe",lat:48.7795,lng:9.1791,dose:0.357,note:"Pedestrian zone with radioactive granite paving",anchor:"Stuttgarter+K%C3%B6nigstra%C3%9Fe"},
+  {name:"Hirschkanal KIT Karlsruhe",lat:49.1007,lng:8.4405,dose:0.35,note:"Cs-137 contamination in canal sediment",anchor:"Hirschkanal+vor+dem+ehemaligen+Kernforschungszentrum"},
+  {name:"Dotternhausen \u00d6lschiefer",lat:48.2217,lng:8.7736,dose:0.272,note:"Natural radioactivity in oil shale",anchor:"%C3%96lschiefer+bei+Dotternhausen"},
+  {name:"Meerane-Waldsachsen",lat:50.8385,lng:12.4391,dose:0.267,note:"Low-level uranium area",anchor:"Hauptstra%C3%9Fe+in+Meerane-Waldsachsen"},
+  {name:"SUR-100 Stuttgart (IKE)",lat:48.7496,lng:9.1045,dose:0.2,note:"Teaching reactor at University of Stuttgart IKE",anchor:"Unterrichtsreaktor+SUR-100"},
+  {name:"Johanngeorgenstadt",lat:50.4283,lng:12.7313,dose:0.925,note:"Former uranium mining town in Erzgebirge",anchor:"Johanngeorgenstadt"}
+];
+
+function getColor(d) {
+  if (d >= 10) return '#A32D2D';
+  if (d >= 3)  return '#D85A30';
+  if (d >= 1)  return '#EF9F27';
+  if (d >= 0.5) return '#639922';
+  return '#378ADD';
+}
+function getTier(d) {
+  if (d >= 10) return 'EXTREME';
+  if (d >= 3)  return 'VERY HIGH';
+  if (d >= 1)  return 'HIGH';
+  if (d >= 0.5) return 'ELEVATED';
+  return 'LOW';
+}
+
+var map = L.map('map').setView([51, 12], 5);
+var isLocalFile = window.location.protocol === 'file:';
+var osmOptions = {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Data: <a href="http://www.opengeiger.de">opengeiger.de</a>',
+  maxZoom: 18
+};
+var voyagerOptions = {
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a> | Data: <a href="http://www.opengeiger.de">opengeiger.de</a>',
+  subdomains: 'abcd',
+  maxZoom: 20
+};
+var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: osmOptions.attribution,
+  maxZoom: osmOptions.maxZoom
+});
+var voyagerLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', voyagerOptions);
+var tileErrors = 0;
+var fallbackActivated = false;
+var userMarker = null;
+var userAccuracyCircle = null;
+
+osmLayer.on('tileerror', function() {
+  tileErrors += 1;
+  if (fallbackActivated || tileErrors < 4) return;
+  fallbackActivated = true;
+  map.removeLayer(osmLayer);
+  voyagerLayer.addTo(map);
+  console.warn('OSM tiles blocked locally (403). Switched to CARTO Voyager fallback.');
+});
+
+if (isLocalFile) {
+  fallbackActivated = true;
+  voyagerLayer.addTo(map);
+} else {
+  osmLayer.addTo(map);
+}
+
+function setLocateStatus(text) {
+  document.getElementById('locate-status').textContent = text;
+}
+
+function showUserPosition(position) {
+  var lat = position.coords.latitude;
+  var lng = position.coords.longitude;
+  var accuracy = position.coords.accuracy || 0;
+
+  if (userMarker) {
+    map.removeLayer(userMarker);
+  }
+  if (userAccuracyCircle) {
+    map.removeLayer(userAccuracyCircle);
+  }
+
+  userMarker = L.circleMarker([lat, lng], {
+    radius: 7,
+    fillColor: '#2d6cdf',
+    color: '#ffffff',
+    weight: 2,
+    fillOpacity: 0.95
+  }).addTo(map);
+  userMarker.bindTooltip('You are here', {direction: 'top'});
+
+  userAccuracyCircle = L.circle([lat, lng], {
+    radius: accuracy,
+    color: '#2d6cdf',
+    fillColor: '#2d6cdf',
+    fillOpacity: 0.12,
+    weight: 1
+  }).addTo(map);
+
+  map.flyTo([lat, lng], 13, {duration: 0.7});
+  setLocateStatus('Current position shown');
+}
+
+function showUserPositionError(err) {
+  if (err && err.code === 1) {
+    setLocateStatus('Location permission denied');
+    return;
+  }
+  setLocateStatus('Unable to get current position');
+}
+
+document.getElementById('locate-btn').addEventListener('click', function() {
+  if (!navigator.geolocation) {
+    setLocateStatus('Geolocation is not supported');
+    return;
+  }
+
+  setLocateStatus('Locating...');
+  navigator.geolocation.getCurrentPosition(showUserPosition, showUserPositionError, {
+    enableHighAccuracy: true,
+    timeout: 15000,
+    maximumAge: 30000
+  });
+});
+
+locations.forEach(function(loc) {
+  var color = getColor(loc.dose);
+  var r = Math.max(7, Math.min(22, 7 + Math.log10(loc.dose + 1) * 9));
+  var marker = L.circleMarker([loc.lat, loc.lng], {
+    radius: r,
+    fillColor: color,
+    color: '#fff',
+    weight: 1.5,
+    fillOpacity: 0.85
+  }).addTo(map);
+
+  marker.bindTooltip(loc.name, {direction: 'top'});
+
+  marker.on('click', function() {
+    var srcUrl = buildSourceUrl(loc);
+    document.getElementById('info').style.display = 'block';
+    document.getElementById('info-name').textContent = loc.name;
+    document.getElementById('info-dose').style.color = color;
+    document.getElementById('info-dose').textContent = loc.dose + ' \u00b5Sv/h';
+    document.getElementById('info-tier').textContent = getTier(loc.dose);
+    document.getElementById('info-note').textContent = loc.note;
+    document.getElementById('info-link').href = srcUrl;
+    document.getElementById('info-gmaps').href = buildGoogleMapsUrl(loc.lat, loc.lng);
+  });
+});
+</script>
+</body>
+</html>

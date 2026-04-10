@@ -1,0 +1,4 @@
+﻿total=227
+with_coords=199
+missing=28
+unresolved_file_rows=28
