@@ -1,1 +1,0 @@
-﻿topic_roots_with_values=26 rows_empty_before=131 rows_filled=3 output_csv=.\geigerzaehlerforum_places_table.csv

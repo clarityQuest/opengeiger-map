@@ -1,5 +1,0 @@
-﻿start=0
-batch_size=20
-processed=20
-filled=1
-remaining=37

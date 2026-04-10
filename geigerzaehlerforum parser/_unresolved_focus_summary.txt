@@ -1,5 +1,0 @@
-﻿total=227
-filled_from_source=23
-filled_from_geocode=0
-with_coords=68
-missing=159
