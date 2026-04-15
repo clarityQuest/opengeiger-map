@@ -558,8 +558,8 @@
     {
       "name": "Abertamy (Abertham) / Karlovy Vary",
       "location": "Abertamy (Abertham) / Karlovy Vary",
-      "lat": 50.373694,
-      "lng": 12.86603,
+      "lat": 50.373746003898574,
+      "lng": 12.844658406958922,
       "dose": 5,
       "url": "https://www.geigerzaehlerforum.de/index.php/topic,2804.0.html"
     },
@@ -796,8 +796,8 @@
     {
       "name": "Der Silvertbach in Marl, Nordrhein-Westfalen",
       "location": "Der Silvertbach in Marl, Nordrhein-Westfalen",
-      "lat": 51.666665,
-      "lng": 7.159691,
+      "lat": 51.6785,
+      "lng": 7.1324,
       "dose": 1.6,
       "url": "https://www.geigerzaehlerforum.de/index.php/topic,811.0.html"
     },
@@ -1186,8 +1186,8 @@
     {
       "name": "IAA 'Hakenkrümme' bei Aue",
       "location": "IAA 'Hakenkrümme' bei Aue",
-      "lat": 50.589,
-      "lng": 12.703,
+      "lat": 50.57971429624291,
+      "lng": 12.726265243950015,
       "dose": 2,
       "url": "https://www.geigerzaehlerforum.de/index.php/topic,89.0.html"
     },
@@ -1472,8 +1472,8 @@
     {
       "name": "Osjorsk-Kyschtym-Kombinat Majak-Tetscha-Karatschai See-",
       "location": "Osjorsk-Kyschtym-Kombinat Majak-Tetscha-Karatschai See-",
-      "lat": 54.8560272,
-      "lng": 57.1402678,
+      "lat": 55.70218947411735,
+      "lng": 60.7916738413267,
       "dose": 5,
       "url": "https://www.geigerzaehlerforum.de/index.php/topic,1066.0.html"
     },
@@ -2111,8 +2111,8 @@
     {
       "name": "Vogesen, Frankreich",
       "location": "Vogesen, Frankreich",
-      "lat": 48.2393,
-      "lng": 7.339,
+      "lat": 48.2421,
+      "lng": 7.3179,
       "dose": 5,
       "url": "https://www.geigerzaehlerforum.de/index.php/topic,407.0.html"
     },
